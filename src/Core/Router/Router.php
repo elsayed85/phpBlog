@@ -89,14 +89,18 @@ class Router
         $models = array_map(function ($value, $key) {
             $modelClass = (new ModelBinding)->getModelClass($key);
 
+            // Handle if the model class is null
+            if ($modelClass === null) {
+                return $value;
+            }
+
             // Only resolve if the model class is found
             if (!empty($modelClass)) {
                 // Here fetch corresponding model instance, replace with actual data fetching code
                 $model = (new $modelClass)->find($value);
 
-                // if model is not found, throw an exception
                 if (!$model) {
-                    echo 'Model not found';
+                    $this->handleNoMatch();
                     exit();
                 }
 

@@ -16,7 +16,7 @@ class ModelBinding
 
     private function loadModels()
     {
-        foreach (glob(__DIR__ . '/../Models/*.php') as $filename) {
+        foreach (glob(__DIR__ . '/../../Models/*.php') as $filename) {
             $class = 'Blog\\Models\\' . basename($filename, '.php');
             if (class_exists($class)) {
                 self::$map[strtolower(basename($filename, '.php'))] = $class;
