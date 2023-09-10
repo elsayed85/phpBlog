@@ -5,6 +5,8 @@ use Blog\Controllers\HomeController;
 use Blog\Controllers\PostController;
 use Blog\Router\Router;
 
+session_start();
+
 $router = new Router();
 
 $router->get('login', [AuthController::class, 'login']);

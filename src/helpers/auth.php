@@ -26,7 +26,7 @@ function redirectIfNotAuthenticated(): void
     }
 }
 
-function redirectIfAuthenticated($url = "/home"): void
+function redirectIfAuthenticated($url = "/"): void
 {
     if (authCheck()) {
         redirect($url);
