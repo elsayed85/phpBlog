@@ -10,7 +10,7 @@
       "src/helpers/redirect.php"
     ]
   },
-  "require": {
+  "require-dev": {
     "spatie/ray": "^1.37"
   }
 }
