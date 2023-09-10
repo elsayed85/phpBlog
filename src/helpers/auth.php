@@ -2,10 +2,7 @@
 
 function authUser(): ?\Blog\Models\User
 {
-    if (isset($_SESSION['user'])) {
-        return $_SESSION['user'];
-    }
-    return null;
+    return $_SESSION['user'] ?? null;
 }
 
 function authCheck(): bool
@@ -21,7 +18,7 @@ function authAttempt($username, $password): bool
 function redirectIfNotAuthenticated(): void
 {
     if (!authCheck()) {
-        redirect('/login');
+        header('Location: /login');
         exit();
     }
 }
@@ -29,7 +26,18 @@ function redirectIfNotAuthenticated(): void
 function redirectIfAuthenticated($url = "/"): void
 {
     if (authCheck()) {
-        redirect($url);
+        header('Location: ' . $url);
         exit();
     }
+}
+
+function authLogout()
+{
+    if (session_status() == PHP_SESSION_NONE) {
+        session_start();
+    }
+    session_unset();
+    session_destroy();
+
+    redirect('/login');
 }

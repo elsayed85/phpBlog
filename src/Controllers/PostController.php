@@ -12,9 +12,24 @@ class PostController
         redirectIfNotAuthenticated();
     }
 
+    private function authorizePostView(Post $post): void
+    {
+        abort_unless($post->getUserId() === authUser()->id, 403, "You are not allowed to see this post");
+    }
+
+    private function authorizePostUpdate(Post $post): void
+    {
+        abort_unless($post->getUserId() === authUser()->id, 403, "You are not allowed to update this post");
+    }
+
+    private function authorizePostDelete(Post $post): void
+    {
+        abort_unless($post->getUserId() === authUser()->id, 403, "You are not allowed to delete this post");
+    }
+
     public function show(Post $post)
     {
-        abort_unless($post->user_id === authUser()->id, 403, "You are not allowed to see this post");
+        $this->authorizePostView($post);
 
         return view('posts.show', [
             "post" => $post
@@ -23,7 +38,7 @@ class PostController
 
     public function edit(Post $post)
     {
-        abort_unless($post->user_id === authUser()->id, 403, "You are not allowed to update this post");
+        $this->authorizePostUpdate($post);
 
         return view('posts.edit', [
             "post" => $post
@@ -32,43 +47,46 @@ class PostController
 
     public function update(Post $post): void
     {
-        abort_unless($post->user_id === authUser()->id, 403, "You are not allowed to update this post");
-        $title = $_POST["title"];
-        $body = $_POST["content"];
-        $errors = [];
+        $this->authorizePostUpdate($post);
+        $postData = $this->getPostData();
+        $this->validatePostData($postData);
 
-        if (empty($title)) {
-            $errors["title"] = "Title is required";
-        }
-
-        if (empty($body)) {
-            $errors["body"] = "Body is required";
-        }
-
-        if (count($errors)) {
-            $_SESSION["errors"] = $errors;
-            back();
-        }
-
-        (new Post())->update($post->id, [
-            "title" => $title,
-            "content" => $body
-        ]);
+        $post->update($postData);
 
         redirect('/');
     }
 
     public function store(): void
     {
-        $title = $_POST["title"];
-        $body = $_POST["content"];
+        $postData = $this->getPostData();
+        $this->validatePostData($postData);
+
+        (new Post())->create([
+            "title" => $postData["title"],
+            "content" => $postData["content"],
+            "user_id" => authUser()->id
+        ]);
+
+        redirect('/');
+    }
+
+    private function getPostData(): array
+    {
+        return [
+            "title" => $_POST["title"],
+            "content" => $_POST["content"]
+        ];
+    }
+
+    private function validatePostData(array $postData): void
+    {
         $errors = [];
 
-        if (empty($title)) {
+        if (empty($postData["title"])) {
             $errors["title"] = "Title is required";
         }
 
-        if (empty($body)) {
+        if (empty($postData["content"])) {
             $errors["body"] = "Body is required";
         }
 
@@ -76,22 +94,13 @@ class PostController
             $_SESSION["errors"] = $errors;
             back();
         }
-
-        (new Post())->create([
-            "title" => $title,
-            "content" => $body,
-            "user_id" => authUser()->id
-        ]);
-
-        redirect('/');
     }
-
 
     public function delete(Post $post): void
     {
-        abort_unless($post->user_id === authUser()->id, 403, "You are not allowed to delete this post");
+        $this->authorizePostDelete($post);
 
-        (new Post())->delete($post->id);
+        $post->delete();
 
         redirect('/');
     }

@@ -13,33 +13,31 @@ class AuthController
 
     public function login()
     {
-        $error = [];
-        $success = '';
+        $sessionMessages = $this->getSessionMessages(['success', 'error']);
 
+        return view('auth.login', $sessionMessages);
+    }
 
-        if (isset($_SESSION['success'])) {
-            $success = $_SESSION['success'];
-            unset($_SESSION['success']);
+    private function getSessionMessages(array $keys)
+    {
+        $messages = [];
+
+        foreach ($keys as $key) {
+            if (isset($_SESSION[$key])) {
+                $messages[$key] = $_SESSION[$key];
+                unset($_SESSION[$key]);
+            }
         }
 
-        if (isset($_SESSION['error'])) {
-            $error = $_SESSION['error'];
-            unset($_SESSION['error']);
-        }
-
-        return view('auth.login', [
-            'error' => $error,
-            'success' => $success
-        ]);
+        return $messages;
     }
 
     public function authenticate()
     {
-        $username = $_POST['username'];
-        $password = $_POST['password'];
+        $credentials = $this->getCredentials();
 
-        if (!authAttempt($username, $password)) {
-            $_SESSION['error'] = 'Invalid credentials';
+        if (!authAttempt($credentials['username'], $credentials['password'])) {
+            $this->setSessionError('Invalid credentials');
             redirect('/login');
             exit();
         }
@@ -47,13 +45,23 @@ class AuthController
         redirect('/');
     }
 
+    private function getCredentials(): array
+    {
+        return [
+            'username' => $_POST['username'],
+            'password' => $_POST['password']
+        ];
+    }
+
+    private function setSessionError(string $message): void
+    {
+        $_SESSION['error'] = $message;
+    }
+
+
     public function register()
     {
-        $errors = [];
-        if (isset($_SESSION['errors'])) {
-            $errors = $_SESSION['errors'];
-            unset($_SESSION['errors']);
-        }
+        $errors = $this->getSessionErrors();
 
         return view('auth.register', [
             'errors' => $errors
@@ -62,45 +70,71 @@ class AuthController
 
     public function store()
     {
-        $name = $_POST['name'];
-        $email = $_POST['email'];
-
-        $errors = [];
-        if (empty($name) || strlen($name) < 3) {
-            $errors['name'] = 'Name is required';
-        }
-        if (empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'Email is required';
-        }
-        if (empty($_POST['password']) || strlen($_POST['password']) < 8) {
-            $errors['password'] = 'Password is required';
-        }
-
-        $users = (new User())->where('email', $email);
-
-        if (count($users)) {
-            $errors['email'] = 'User with this email already exists';
-        }
+        $userData = $this->getUserData();
+        $errors = $this->validateUserData($userData);
 
         if (!empty($errors)) {
-            $_SESSION['errors'] = $errors;
+            $this->setSessionErrors($errors);
             redirect('/register');
             exit();
         }
 
+        $this->createUser($userData);
+    }
 
-        $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    private function getSessionErrors(): array
+    {
+        $errors = [];
+        if (isset($_SESSION['errors'])) {
+            $errors = $_SESSION['errors'];
+            unset($_SESSION['errors']);
+        }
+        return $errors;
+    }
 
-        $created = (new User())->create(compact('name', 'email', 'password'));
+    private function getUserData(): array
+    {
+        return [
+            'name' => $_POST['name'],
+            'email' => $_POST['email'],
+            'password' => $_POST['password']
+        ];
+    }
 
-        if (!$created) {
-            $_SESSION['error'] = 'Something went wrong';
+    private function validateUserData(array $userData): array
+    {
+        $errors = [];
+        if (empty($userData['name']) || strlen($userData['name']) < 3) {
+            $errors['name'] = 'Name must be at least 3 characters long';
+        }
+        if (empty($userData['email']) || !filter_var($userData['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors['email'] = 'Valid email is required';
+        }
+        if (empty($userData['password']) || strlen($userData['password']) < 8) {
+            $errors['password'] = 'Password must be at least 8 characters long';
+        }
+        if (!empty($userData['email']) && count((new User())->where('email', $userData['email']))) {
+            $errors['email'] = 'User with this email already exists';
+        }
+        return $errors;
+    }
+
+    private function setSessionErrors(array $errors): void
+    {
+        $_SESSION['errors'] = $errors;
+    }
+
+    private function createUser(array $userData): void
+    {
+        $userData['password'] = password_hash($userData['password'], PASSWORD_DEFAULT);
+
+        if (!(new User())->create($userData)) {
+            $this->setSessionError('Something went wrong');
             redirect('/register');
             exit();
         }
 
         $_SESSION['success'] = 'You have been registered successfully';
-
         redirect('/login');
     }
 }

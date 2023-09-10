@@ -7,7 +7,8 @@
       "src/helpers/abort_functions.php",
       "src/helpers/auth.php",
       "src/helpers/view.php",
-      "src/helpers/redirect.php"
+      "src/helpers/redirect.php",
+      "src/helpers/global.php"
     ]
   },
   "require-dev": {

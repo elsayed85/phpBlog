@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'title' => "BLOG"
+    "name" => "Blog"
 ];

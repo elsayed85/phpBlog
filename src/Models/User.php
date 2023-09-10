@@ -3,6 +3,7 @@
 namespace Blog\Models;
 
 use PDO;
+use Blog\Core\Model;
 
 class User extends Model
 {
@@ -21,7 +22,7 @@ class User extends Model
 
     public function createPost(Post $post): bool
     {
-        return (new Post())->create([
+        return $post->create([
             'title' => $post->title,
             'body' => $post->body,
             'user_id' => $this->id
@@ -29,7 +30,7 @@ class User extends Model
     }
 
     // Authenticate user
-    public function login($username, $password)
+    public function authenticate($username, $password)
     {
         // SQL query to find user
         $sql = "SELECT * FROM $this->table WHERE email = :email";
@@ -40,7 +41,7 @@ class User extends Model
 
         // If user exists and passwords match, return the user
         if ($user && password_verify($password, $user['password'])) {
-            return (new User())->fromArray($user);
+            return $this->fromArray($user);
         } else {
             return false;
         }
@@ -48,25 +49,13 @@ class User extends Model
 
     public static function attempt($email, $password)
     {
-        $user = new User();
-        $validUser = $user->login($email, $password);
+        $user = new self();
+        $validUser = $user->authenticate($email, $password);
         if ($validUser) {
             $_SESSION['user'] = $validUser;
             return true;
         } else {
             return false;
         }
-    }
-
-    // Log out
-    public function logout()
-    {
-        if (session_status() == PHP_SESSION_NONE) {
-            session_start();
-        }
-        session_unset();
-        session_destroy();
-
-        redirect('/login');
     }
 }

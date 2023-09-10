@@ -14,15 +14,14 @@ class HomeController
     public function home()
     {
         $user = authUser();
-        $posts = $user->posts();
         return view('home', [
             "user" => $user,
-            "posts" => $posts
+            "posts" => $user->posts()
         ]);
     }
 
     public function logout()
     {
-        authUser()->logout();
+        authLogout();
     }
 }

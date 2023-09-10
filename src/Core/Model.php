@@ -1,15 +1,13 @@
 <?php
 
-namespace Blog\Models;
+namespace Blog\Core;
 
-
-use Blog\Database\DatabaseConnection;
+use Blog\Core\Database\DatabaseConnection;
 use PDO;
 
 abstract class Model
 {
     protected PDO $conn;
-
     protected string $table;
 
     public function __construct()
@@ -30,13 +28,12 @@ abstract class Model
 
     protected function setTableName(): void
     {
-        $default = $this->table;
+        $this->table = $this->table ?: $this->getDefaultTableName();
+    }
 
-        if (!$default) {
-            $default = strtolower(str_replace('Blog\Models\\', '', get_class($this))).'s';
-        }
-
-        $this->table = $default;
+    protected function getDefaultTableName(): string
+    {
+        return strtolower(str_replace('Blog\Models\\', '', get_class($this))) . 's';
     }
 
     public function fromArray(array $data)
@@ -52,14 +49,12 @@ abstract class Model
     public function create($data): bool
     {
         $fields = implode(',', array_keys($data));
-        $values = ':'.implode(', :', array_keys($data));
+        $values = ':' . implode(', :', array_keys($data));
 
         $sql = "INSERT INTO $this->table ($fields) VALUES ($values)";
         $stmt = $this->conn->prepare($sql);
 
-        foreach ($data as $key => $value) {
-            $stmt->bindValue(":$key", $value);
-        }
+        $this->bindValues($stmt, $data);
 
         return $stmt->execute();
     }
@@ -73,7 +68,20 @@ abstract class Model
         return $result ? $this->fromArray($result) : null;
     }
 
-    public function update($id, $data): bool
+    public function update($data): bool
+    {
+        $fields = $this->getFields($data);
+
+        $sql = "UPDATE $this->table SET $fields WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $data['id'] = $this->id;
+
+        $this->bindValues($stmt, $data);
+
+        return $stmt->execute();
+    }
+
+    protected function getFields($data): string
     {
         $fields = '';
 
@@ -81,30 +89,26 @@ abstract class Model
             $fields .= "$key = :$key, ";
         }
 
-        $fields = rtrim($fields, ', ');
+        return rtrim($fields, ', ');
+    }
 
-        $sql = "UPDATE $this->table SET $fields WHERE id = :id";
-        $stmt = $this->conn->prepare($sql);
-        $data['id'] = $id;
-
+    protected function bindValues($stmt, $data): void
+    {
         foreach ($data as $key => $value) {
             $stmt->bindValue(":$key", $value);
         }
-
-        return $stmt->execute();
     }
 
-
-    public function delete($id): bool
+    public function delete(): bool
     {
         $sql = "DELETE FROM $this->table WHERE id = :id";
         $stmt = $this->conn->prepare($sql);
-        return $stmt->execute([':id' => $id]);
+        return $stmt->execute([':id' => $this->id]);
     }
 
     public function where($column, $value)
     {
-        $stmt = $this->conn->prepare("SELECT * FROM ".$this->table." WHERE $column = :value");
+        $stmt = $this->conn->prepare("SELECT * FROM " . $this->table . " WHERE $column = :value");
         $stmt->execute([':value' => $value]);
 
         return $stmt->fetchAll(PDO::FETCH_CLASS, get_called_class());
@@ -119,11 +123,21 @@ abstract class Model
     // Relations
     public function hasMany($related, $foreignKey = null): array
     {
-        $foreignKey = $foreignKey ?? strtolower((new \ReflectionClass($this))->getShortName()).'_id';
-        $query = "SELECT * FROM ".(new $related)->table." WHERE $foreignKey = :id";
+        $foreignKey = $foreignKey ?? $this->getForeignKey();
+        $query = "SELECT * FROM " . (new $related)->table . " WHERE $foreignKey = :id";
         $stmt = $this->conn->prepare($query);
         $stmt->execute([':id' => $this->id]);
 
+        return $this->getRelatedInstances($stmt, $related);
+    }
+
+    protected function getForeignKey(): string
+    {
+        return strtolower((new \ReflectionClass($this))->getShortName()) . '_id';
+    }
+
+    protected function getRelatedInstances($stmt, $related): array
+    {
         $relatedInstances = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $relatedInstances[] = (new $related)->fromArray($row);
@@ -134,8 +148,8 @@ abstract class Model
 
     public function belongsTo($related, $foreignKey = null): array|null
     {
-        $foreignKey = $foreignKey ?? strtolower((new \ReflectionClass($this))->getShortName()).'_id';
-        $query = "SELECT * FROM ".(new $related)->table." WHERE id = :id";
+        $foreignKey = $foreignKey ?? $this->getForeignKey();
+        $query = "SELECT * FROM " . (new $related)->table . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);
         $stmt->execute([':id' => $this->$foreignKey]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
