@@ -1,0 +1,16 @@
+{
+  "autoload": {
+    "psr-4": {
+      "Blog\\": "src/"
+    },
+    "files": [
+      "src/helpers/abort_functions.php",
+      "src/helpers/auth.php",
+      "src/helpers/view.php",
+      "src/helpers/redirect.php"
+    ]
+  },
+  "require": {
+    "spatie/ray": "^1.37"
+  }
+}
