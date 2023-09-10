@@ -6,10 +6,13 @@ use Blog\Models\User;
 
 class AuthController
 {
-    public function login()
+    public function __construct()
     {
         redirectIfAuthenticated();
+    }
 
+    public function login()
+    {
         $error = [];
         $success = '';
 
@@ -32,7 +35,6 @@ class AuthController
 
     public function authenticate()
     {
-        redirectIfAuthenticated();
         $username = $_POST['username'];
         $password = $_POST['password'];
 
@@ -47,8 +49,6 @@ class AuthController
 
     public function register()
     {
-        redirectIfAuthenticated();
-
         $errors = [];
         if (isset($_SESSION['errors'])) {
             $errors = $_SESSION['errors'];
@@ -62,8 +62,6 @@ class AuthController
 
     public function store()
     {
-        redirectIfAuthenticated();
-
         $name = $_POST['name'];
         $email = $_POST['email'];
 
@@ -104,11 +102,5 @@ class AuthController
         $_SESSION['success'] = 'You have been registered successfully';
 
         redirect('/login');
-    }
-
-    public function logout()
-    {
-        redirectIfNotAuthenticated();
-        authUser()->logout();
     }
 }

@@ -13,7 +13,7 @@ $router->get('register', [AuthController::class, 'register']);
 $router->post('register', [AuthController::class, 'store']);
 
 $router->get('/', [HomeController::class, 'home']);
-$router->get('logout', [AuthController::class, 'logout']);
+$router->get('logout', [HomeController::class, 'logout']);
 
 $router->get('post/{post}/show', [PostController::class, 'show']);
 $router->get('post/{post}/edit', [PostController::class, 'edit']);

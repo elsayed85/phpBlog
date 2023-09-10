@@ -20,4 +20,9 @@ class HomeController
             "posts" => $posts
         ]);
     }
+
+    public function logout()
+    {
+        authUser()->logout();
+    }
 }
